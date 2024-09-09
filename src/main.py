@@ -34,19 +34,17 @@ Base.metadata.create_all(engine)
 # tao 1 Session de lam viec voi co so du lieu
 SessionLocal = sessionmaker(autocommit = False, autoflush = False, bind = engine)
 
-#dependency de lay session tu co so du lieu
-def get_db():
-     db = SessionLocal()
-     try:
-         yield db
-     finally:
-         db.close()
+# Dinh nghia Pydnatic model de dung lam input model
+class todoItemInput(BaseModel):
+    title: str
+    description: str = None
+    completed: bool = False
 
 # Dinh nghia Pydantic model de dung lam response model
 class todoItemResponse(BaseModel):
     id: int
     title: str
-    description: str
+    description: str = None
     completed: bool = False
 
     class Config:
@@ -59,24 +57,17 @@ async def get_todos():
     session = SessionLocal()
     # truy van du lieu tu bang
     todos = session.query(todoItem).all()
-    session.close()
     return todos
 
 # End-point 2: them 1 to-do moi
 @app.post("/todos", response_model = todoItemResponse)
-async def create_todo(todo: todoItem):
+async def create_todo(todo: todoItemInput):
     session = SessionLocal()
     tg = todoItem(title = todo.title, description = todo.description, completed = todo.completed)
     session.add(tg)
     session.commit()
-    session.close()
-    #return ra mot bien todoItemResponse
-    return todoItemResponse(
-        id =
-        title = todo.title
-        description = todo.description
-        completed = todo.completed
-    )
+    session.refresh(tg)
+    return tg
 
 # End-point 3: xoa 1 to-do theo id cua chung
 @app.delete("/todos/{todo_id}")
@@ -86,10 +77,8 @@ async def delete_todo(todo_id: int):
     if todo_to_delete is not None:
         session.delete(todo_to_delete)
         session.commit()
-        session.close()
         return {"message": "todo has been deleted!"}
     else:
-        session.close()
         raise HTTPException(status_code = 404, detail = "todo not found")
 
 # End-point 4: thanh doi trang thai completed cua 1 to-do
@@ -98,12 +87,11 @@ async def update_todo(todo_id: int):
     session = SessionLocal()
     todo_to_update = session.query(todoItem).filter(todoItem.id == todo_id).first()
     if todo_to_update is None:
-        session.close()
         raise HTTPException(status_code = 404, detail = "todo not found!")
     todo_to_update['completed'] = not todo_to_update['completed']
     session.commit()
-    session.close()
-    return {"message": "todo has been update"}
+    session.refresh(todo_to_update)
+    return todo_to_update
 
 
 
