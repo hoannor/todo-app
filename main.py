@@ -102,19 +102,19 @@ async def update_todo_completed(todo_id: int):
     session.refresh(todo_to_update)
     return todo_to_update
 
-# End-point 5: danh dau 1 todo la dang trong qua trinh lam
+# End-point 5: danh dau 1 to-do la dang trong qua trinh lam
 @app.patch("/todos/in_progress/{todo_id}", response_model = todoItemResponse)
 async def update_todo_in_progress(todo_id: int):
     session = SessionLocal()
     todo_to_update = session.query(todoItem).filter(todoItem.id == todo_id).first()
     if todo_to_update is None:
         raise HTTPException(status_code = 404, detail = "todo not found!")
-    todo_to_update.in_progress = not todo_to_update.inprogress
+    todo_to_update.inprogress = not todo_to_update.inprogress
     session.commit()
     session.refresh(todo_to_update)
     return todo_to_update
 
-# End-point 6: chuc nang xoa cac todo da hoan thanh
+# End-point 6: chuc nang xoa cac to-do da hoan thanh
 @app.patch("/todos/deletedones")
 async def delete_dones():
     session = SessionLocal()
