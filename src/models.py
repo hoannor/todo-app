@@ -1,11 +1,18 @@
-from sqlalchemy import Column, String, Integer, Boolean, create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import Column, String, Integer, Boolean, column, ForeignKey
+from sqlalchemy.orm import declarative_base, relationship
 
-DATABASE_URL = "postgresql+psycopg2://postgres:1234@localhost:5433/todoapp"
-
-engine = create_engine(DATABASE_URL)
+from src.service import engine
 
 Base = declarative_base()
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key = True, index = True)
+    username = Column(String, unique = True, index = True, nullable = False)
+    hashed_password = Column(String, nullable = False)
+
+    todos = relationship("todoItem", back_populates = "owner")
 
 class todoItem(Base):
     __tablename__ = 'todos'
@@ -15,6 +22,9 @@ class todoItem(Base):
     description = Column(String)
     completed = Column(Boolean, default = False)
     inprogress = Column(Boolean, default = False)
+    user_id = Column(Integer, ForeignKey('users.id'))
+
+    owner = relationship("User", back_populates = "todos")
 
 Base.metadata.create_all(engine)
 
