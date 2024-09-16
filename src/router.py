@@ -33,7 +33,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 # End-point dang nhap va lay JWT token
 @router.post("/token", response_model = Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.user_name, form_data.password)
+    user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "Incorrect username or password", headers = {"WWW-Authenticate": "Bearer"})
     access_token_expires = timedelta(minutes = ACCESS_TOKEN_EXPIRE_MINUTES)

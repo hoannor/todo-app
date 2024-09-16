@@ -39,12 +39,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 # lay nguoi dung to co so du lieu
-def get_user(db: Session, username: str):
-    return db.query(User).filter(User.username == username).first()
+def get_user(db: Session, user_name: str):
+    return db.query(User).filter(User.user_name == user_name).first()
 
 # xac thuc nguoi dung
-def authenticate_user(db: Session, username: str, password: str):
-    user = get_user(db, username)
+def authenticate_user(db: Session, user_name: str, password: str):
+    user = get_user(db, user_name)
     if not user:
         return False
     if not vertify_password(password, user.hashed_password):
@@ -56,12 +56,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     credeentials_exception = HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "Could not validate credentials", headers = {"WWW-Authenticate": "Bearer"}, )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms = [ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        user_name: str = payload.get("sub")
+        if user_name is None:
             raise credeentials_exception
     except JWTError:
         raise credeentials_exception
-    user = get_user(db, username = username)
+    user = get_user(db, user_name = user_name)
     if user is None:
         raise credeentials_exception
     return user
