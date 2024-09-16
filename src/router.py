@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.auth import get_password_hash, authenticate_user, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_user
 from src.models import todoItem, User
-from src.schemas import todoItemResponse, todoItemInput, UserCreate, Token
+from src.schemas import todoItemResponse, todoItemInput, UserCreate, Token, UserResponse
 from src.service import get_db
 
 router = APIRouter()
@@ -16,8 +16,8 @@ router = APIRouter()
                         #_____authen/author router_____
 
 # End-point: dang ki nguoi dung
-@router.post("/register", response_model = UserCreate)
-def register_user(user: UserCreate, db: Session = Depends(get_db())):
+@router.post("/register", response_model = UserResponse)
+async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code = 400, detail = "Username already registed")
@@ -30,13 +30,16 @@ def register_user(user: UserCreate, db: Session = Depends(get_db())):
 
 # End-point dang nhap va lay JWT token
 @router.post("/token", response_model = Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db())):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "Incorrect username or password", headers = {"WWW-Authenticate": "Bearer"})
     access_token_expires = timedelta(minutes = ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data = {"sub": user.username}, expires_delta = access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+
                            # _____todos router_____
 
 @router.get("/todos", response_model = List[todoItemResponse])
@@ -45,7 +48,7 @@ async def get_todos(db: Session = Depends(get_db)):
     return todos
 
 @router.post("/todos", response_model = todoItemResponse)
-async def create_todo(todo: todoItemInput, db: Session = Depends(get_db), current_user: User = Depends(get_current_user())):
+async def create_todo(todo: todoItemInput, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     tg = todoItem(title = todo.title, description = todo.description, completed = todo.completed, inprogress = todo.inprogress, user_id = current_user.id)
     db.add(tg)
     db.commit()
@@ -84,9 +87,6 @@ async def update_todo_in_progress(todo_id: int, db: Session = Depends(get_db)):
 
 @router.delete("/todos_delete_done/delete_dones")
 async def delete_dones(db: Session = Depends(get_db)):
-    todo_to_delete = db.query(todoItem).filter(todoItem.completed == True).first()
-    while todo_to_delete is not None:
-        db.delete(todo_to_delete)
-        db.commit()
-        todo_to_delete = db.query(todoItem).filter(todoItem.completed == True).first()
+    db.query(todoItem).filter(todoItem.completed == True).delete(synchronize_session='fetch')
+    db.commit()
     return {"message": "All dones have been deleted"}

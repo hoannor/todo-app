@@ -52,7 +52,7 @@ def authenticate_user(db: Session, username: str, password: str):
     return user
 
 # xac thuc va lay thong tin nguoi dung tu token
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db())):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credeentials_exception = HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "Could not validate credentials", headers = {"WWW-Authenticate": "Bearer"}, )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms = [ALGORITHM])
