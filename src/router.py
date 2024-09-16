@@ -22,22 +22,22 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code = 400, detail = "Username already registed")
     hashed_password = get_password_hash(user.password)
-    new_user = User(username = user.username, hashed_password = hashed_password)
+    new_user = User(user_name = user.user_name, hashed_password = hashed_password)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return UserResponse(id = new_user.id,
-                      username = new_user.user_name,
+                      user_name = new_user.user_name,
                       password = new_user.hashed_password)
 
 # End-point dang nhap va lay JWT token
 @router.post("/token", response_model = Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
+    user = authenticate_user(db, form_data.user_name, form_data.password)
     if not user:
         raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "Incorrect username or password", headers = {"WWW-Authenticate": "Bearer"})
     access_token_expires = timedelta(minutes = ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(data = {"sub": user.username}, expires_delta = access_token_expires)
+    access_token = create_access_token(data = {"sub": user.user_name}, expires_delta = access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -55,7 +55,15 @@ async def create_todo(todo: TodoItemInput, db: Session = Depends(get_db), curren
     db.add(tg)
     db.commit()
     db.refresh(tg)
-    return tg
+    return TodoItemResponse(
+        id = tg.id,
+        title = tg.title,
+        description = tg.description,
+        completed = tg.completed,
+        inprogress = tg.inprogress,
+        user_id = tg.user_id
+    )
+
 
 @router.delete("/todos/{todo_id}")
 async def delete_todo(todo_id: int, db: Session = Depends(get_db)):

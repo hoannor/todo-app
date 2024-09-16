@@ -12,7 +12,7 @@ class User(Base):
     user_name = Column(String, unique = True, index = True, nullable = False)
     hashed_password = Column(String, nullable = False)
 
-    todos = relationship("todoItem", back_populates = "owner")
+    todos = relationship("TodoItem", back_populates = "owner")
 
 class TodoItem(Base):
     __tablename__ = 'todos'
