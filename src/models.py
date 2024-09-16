@@ -9,12 +9,12 @@ class User(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key = True, index = True)
-    username = Column(String, unique = True, index = True, nullable = False)
+    user_name = Column(String, unique = True, index = True, nullable = False)
     hashed_password = Column(String, nullable = False)
 
     todos = relationship("todoItem", back_populates = "owner")
 
-class todoItem(Base):
+class TodoItem(Base):
     __tablename__ = 'todos'
 
     id = Column(Integer, primary_key = True, nullable = False)

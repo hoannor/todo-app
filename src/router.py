@@ -6,8 +6,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from src.auth import get_password_hash, authenticate_user, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_user
-from src.models import todoItem, User
-from src.schemas import todoItemResponse, todoItemInput, UserCreate, Token, UserResponse
+from src.models import TodoItem, User
+from src.schemas import TodoItemResponse, TodoItemInput, UserCreate, Token, UserResponse
 from src.service import get_db
 
 router = APIRouter()
@@ -17,8 +17,8 @@ router = APIRouter()
 
 # End-point: dang ki nguoi dung
 @router.post("/register", response_model = UserResponse)
-async def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.username == user.username).first()
+def register_user(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.user_name == user.user_name).first()
     if db_user:
         raise HTTPException(status_code = 400, detail = "Username already registed")
     hashed_password = get_password_hash(user.password)
@@ -26,7 +26,9 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    return new_user
+    return UserResponse(id = new_user.id,
+                      username = new_user.user_name,
+                      password = new_user.hashed_password)
 
 # End-point dang nhap va lay JWT token
 @router.post("/token", response_model = Token)
@@ -42,14 +44,14 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
                            # _____todos router_____
 
-@router.get("/todos", response_model = List[todoItemResponse])
+@router.get("/todos", response_model = List[TodoItemResponse])
 async def get_todos(db: Session = Depends(get_db)):
-    todos = db.query(todoItem).all()
+    todos = db.query(TodoItem).all()
     return todos
 
-@router.post("/todos", response_model = todoItemResponse)
-async def create_todo(todo: todoItemInput, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    tg = todoItem(title = todo.title, description = todo.description, completed = todo.completed, inprogress = todo.inprogress, user_id = current_user.id)
+@router.post("/todos", response_model = TodoItemResponse)
+async def create_todo(todo: TodoItemInput, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tg = TodoItem(title = todo.title, description = todo.description, completed = todo.completed, inprogress = todo.inprogress, user_id = current_user.id)
     db.add(tg)
     db.commit()
     db.refresh(tg)
@@ -57,7 +59,7 @@ async def create_todo(todo: todoItemInput, db: Session = Depends(get_db), curren
 
 @router.delete("/todos/{todo_id}")
 async def delete_todo(todo_id: int, db: Session = Depends(get_db)):
-    todo_to_delete = db.query(todoItem).filter(todoItem.id == todo_id).first()
+    todo_to_delete = db.query(TodoItem).filter(TodoItem.id == todo_id).first()
     if todo_to_delete is not None:
         db.delete(todo_to_delete)
         db.commit()
@@ -65,9 +67,9 @@ async def delete_todo(todo_id: int, db: Session = Depends(get_db)):
     else:
         raise HTTPException(status_code = 404, detail = "todo not found")
 
-@router.patch("/todos/completed/{todo_id}", response_model = todoItemResponse)
+@router.patch("/todos/completed/{todo_id}", response_model = TodoItemResponse)
 async def update_todo_completed(todo_id: int, db: Session = Depends(get_db)):
-    todo_to_update = db.query(todoItem).filter(todoItem.id == todo_id).first()
+    todo_to_update = db.query(TodoItem).filter(TodoItem.id == todo_id).first()
     if todo_to_update is None:
         raise HTTPException(status_code = 404, detail = "todo not found")
     todo_to_update.completed = not todo_to_update.completed
@@ -75,9 +77,9 @@ async def update_todo_completed(todo_id: int, db: Session = Depends(get_db)):
     db.refresh(todo_to_update)
     return todo_to_update
 
-@router.patch("/todos/in_progress/{todo_id}", response_model = todoItemResponse)
+@router.patch("/todos/in_progress/{todo_id}", response_model = TodoItemResponse)
 async def update_todo_in_progress(todo_id: int, db: Session = Depends(get_db)):
-    todo_to_update = db.query(todoItem).filter(todoItem.id == todo_id).first()
+    todo_to_update = db.query(TodoItem).filter(TodoItem.id == todo_id).first()
     if todo_to_update is None:
         raise HTTPException(status_code = 404, detail = "todo not found")
     todo_to_update.inprogress = not todo_to_update.inprogress
@@ -87,6 +89,6 @@ async def update_todo_in_progress(todo_id: int, db: Session = Depends(get_db)):
 
 @router.delete("/todos_delete_done/delete_dones")
 async def delete_dones(db: Session = Depends(get_db)):
-    db.query(todoItem).filter(todoItem.completed == True).delete(synchronize_session='fetch')
+    db.query(TodoItem).filter(TodoItem.completed == True).delete(synchronize_session='fetch')
     db.commit()
     return {"message": "All dones have been deleted"}

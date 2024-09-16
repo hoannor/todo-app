@@ -1,12 +1,12 @@
 from pydantic import BaseModel
 
 class UserCreate(BaseModel):
-    username: str
+    user_name: str
     password: str
 
 class UserResponse(BaseModel):
     id: int
-    username: str
+    user_name: str
     password: str
 
     class Config:
@@ -16,13 +16,13 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-class todoItemInput(BaseModel):
+class TodoItemInput(BaseModel):
     title: str
     description: str = None
     completed: bool = False
     inprogress: bool = False
 
-class todoItemResponse(BaseModel):
+class TodoItemResponse(BaseModel):
     id: int
     title: str
     description: str = None
