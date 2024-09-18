@@ -5,7 +5,8 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from src.auth import get_password_hash, authenticate_user, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_user
+from src.auth import get_password_hash, authenticate_user, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, \
+    get_current_user, ADMIN_SECRET
 from src.models import TodoItem, User
 from src.schemas import TodoItemResponse, TodoItemInput, UserCreate, Token, UserResponse
 from src.service import get_db
@@ -22,13 +23,17 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code = 400, detail = "Username already registed")
     hashed_password = get_password_hash(user.password)
-    new_user = User(user_name = user.user_name, hashed_password = hashed_password)
+    if user.admin_password == ADMIN_SECRET:
+        new_user = User(user_name = user.user_name, hashed_password = hashed_password, is_admin = True)
+    else:
+        new_user = User(user_name = user.user_name, hashed_password = hashed_password, is_admin = False)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return UserResponse(id = new_user.id,
                       user_name = new_user.user_name,
-                      password = new_user.hashed_password)
+                      password = new_user.hashed_password,
+                      is_admin = new_user.is_admin)
 
 # End-point dang nhap va lay JWT token
 @router.post("/token", response_model = Token)
@@ -66,37 +71,57 @@ async def create_todo(todo: TodoItemInput, db: Session = Depends(get_db), curren
 
 
 @router.delete("/todos/{todo_id}")
-async def delete_todo(todo_id: int, db: Session = Depends(get_db)):
-    todo_to_delete = db.query(TodoItem).filter(TodoItem.id == todo_id).first()
-    if todo_to_delete is not None:
-        db.delete(todo_to_delete)
-        db.commit()
-        return {"message": "todo has been deleted"}
+async def delete_todo(todo_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.is_admin is True:
+        todo_to_delete = db.query(TodoItem).filter(TodoItem.id == todo_id).first()
+        if todo_to_delete is not None:
+            db.delete(todo_to_delete)
+            db.commit()
+            return {"message": "todo has been deleted"}
+        else:
+            raise HTTPException(status_code = 404, detail = "todo not found")
     else:
-        raise HTTPException(status_code = 404, detail = "todo not found")
+        todo_to_delete = db.query(TodoItem).filter(TodoItem.id == todo_id).first()
+        if todo_to_delete is not None:
+            if current_user.id == todo_to_delete.user_id:
+                db.delete(todo_to_delete)
+                db.commit()
+                return {"message": "todo has been deleted"}
+            else:
+                raise HTTPException(status_code=401, detail="you don't have permision to do that!")
+        else:
+            raise HTTPException(status_code = 404, detail = "todo not found")
 
 @router.patch("/todos/completed/{todo_id}", response_model = TodoItemResponse)
-async def update_todo_completed(todo_id: int, db: Session = Depends(get_db)):
+async def update_todo_completed(todo_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     todo_to_update = db.query(TodoItem).filter(TodoItem.id == todo_id).first()
     if todo_to_update is None:
         raise HTTPException(status_code = 404, detail = "todo not found")
-    todo_to_update.completed = not todo_to_update.completed
-    db.commit()
-    db.refresh(todo_to_update)
-    return todo_to_update
+    if current_user.is_admin is True:
+        todo_to_update.completed = not todo_to_update.completed
+        db.commit()
+        db.refresh(todo_to_update)
+        return todo_to_update
+    else:
+        raise HTTPException(status_code = 401, detail = "you don't have permision to do that!")
 
 @router.patch("/todos/in_progress/{todo_id}", response_model = TodoItemResponse)
-async def update_todo_in_progress(todo_id: int, db: Session = Depends(get_db)):
+async def update_todo_in_progress(todo_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     todo_to_update = db.query(TodoItem).filter(TodoItem.id == todo_id).first()
     if todo_to_update is None:
         raise HTTPException(status_code = 404, detail = "todo not found")
-    todo_to_update.inprogress = not todo_to_update.inprogress
-    db.commit()
-    db.refresh(todo_to_update)
-    return todo_to_update
+    if current_user.is_admin is True:
+        todo_to_update.inprogress = not todo_to_update.inprogress
+        db.commit()
+        db.refresh(todo_to_update)
+        return todo_to_update
+    else:
+        raise HTTPException(status_code = 401, detail = "you don't have permision to do that!")
 
 @router.delete("/todos_delete_done/delete_dones")
-async def delete_dones(db: Session = Depends(get_db)):
-    db.query(TodoItem).filter(TodoItem.completed == True).delete(synchronize_session='fetch')
-    db.commit()
-    return {"message": "All dones have been deleted"}
+async def delete_dones(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.is_admin is True:
+        db.query(TodoItem).filter(TodoItem.completed == True).delete(synchronize_session='fetch')
+        db.commit()
+        return {"message": "All dones have been deleted"}
+    raise HTTPException(status_code = 401, detail = "you don't have permision to do that!")

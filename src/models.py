@@ -11,6 +11,7 @@ class User(Base):
     id = Column(Integer, primary_key = True, index = True)
     user_name = Column(String, unique = True, index = True, nullable = False)
     hashed_password = Column(String, nullable = False)
+    is_admin = Column(Boolean, default = False)
 
     todos = relationship("TodoItem", back_populates = "owner")
 

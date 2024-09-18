@@ -12,6 +12,7 @@ from src.service import get_db
 
 # thiet lap cau hinh JWT
 
+ADMIN_SECRET = "12345"
 SECRET_KEY = "hoan7203"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30

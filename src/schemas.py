@@ -3,11 +3,13 @@ from pydantic import BaseModel
 class UserCreate(BaseModel):
     user_name: str
     password: str
+    admin_password: str = None
 
 class UserResponse(BaseModel):
     id: int
     user_name: str
     password: str
+    is_admin: bool = False
 
     class Config:
         orm_mode = True
