@@ -88,7 +88,7 @@ async def delete_todo(todo_id: int, db: Session = Depends(get_db), current_user:
                 db.commit()
                 return {"message": "todo has been deleted"}
             else:
-                raise HTTPException(status_code=401, detail="you don't have permision to do that!")
+                raise HTTPException(status_code=401, detail="you don't have permission to do that!")
         else:
             raise HTTPException(status_code = 404, detail = "todo not found")
 
@@ -103,7 +103,7 @@ async def update_todo_completed(todo_id: int, db: Session = Depends(get_db), cur
         db.refresh(todo_to_update)
         return todo_to_update
     else:
-        raise HTTPException(status_code = 401, detail = "you don't have permision to do that!")
+        raise HTTPException(status_code = 401, detail = "you don't have permission to do that!")
 
 @router.patch("/todos/in_progress/{todo_id}", response_model = TodoItemResponse)
 async def update_todo_in_progress(todo_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -116,7 +116,7 @@ async def update_todo_in_progress(todo_id: int, db: Session = Depends(get_db), c
         db.refresh(todo_to_update)
         return todo_to_update
     else:
-        raise HTTPException(status_code = 401, detail = "you don't have permision to do that!")
+        raise HTTPException(status_code = 401, detail = "you don't have permission to do that!")
 
 @router.delete("/todos_delete_done/delete_dones")
 async def delete_dones(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -124,4 +124,4 @@ async def delete_dones(db: Session = Depends(get_db), current_user: User = Depen
         db.query(TodoItem).filter(TodoItem.completed == True).delete(synchronize_session='fetch')
         db.commit()
         return {"message": "All dones have been deleted"}
-    raise HTTPException(status_code = 401, detail = "you don't have permision to do that!")
+    raise HTTPException(status_code = 401, detail = "you don't have permission to do that!")
